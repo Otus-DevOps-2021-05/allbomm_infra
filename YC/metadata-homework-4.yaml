@@ -1,0 +1,29 @@
+# metadata for yandex cloud VM homework 4 (lesson 6)
+
+package_update: true
+package_upgrade: true
+
+users:
+  - default
+  - name: appuser
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - 'ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAhLelRW0hSKtBNvsvvXjFgK6OKF6cDmenjAh1kDCAYw04WngzZoWtSoIrGeGG7+y5hOyNMQ7RCCtNJevuZoC0Wvn/s00LzZpHpQB6Uja4K1waoV500A8L3cH89cvhM82bRr5uIvuI9fb8cE5UkFNiPWTQQGnabsE059KQDK62ALH1/FinBaRQQFWScinKwYB05uTSHTx2GycNurAz9dy9sbf9CfiCw2orOmp47YPufdhGkR6n5n23DxrguSRdU2LB5RjAm85nqokfyUzCWFLtTlUWZaDYT+LOFFmOUUBPF16bX9bqqw0OjASUrZAccLm+3r5ubrfXaD2HCABysrIEUw== rsa-key-20210627'
+
+runcmd:
+  - [apt, update]
+  - [apt, upgrade]
+  - [apt, install, -y, ruby-full]
+  - [apt, install, -y, ruby-bundler]
+  - [apt, install, -y, build-essential]
+  - wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
+  - echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list
+  - [apt-get, install, -y, mongodb-org]
+  - [systemctl, start, mongod]
+  - [systemctl, enable, mongod]
+  - [apt, install, -y, git]
+  - [git, clone, -b, monolith, "https://github.com/express42/reddit.git"]
+  - [cd, reddit]
+  - [bundle, install]
+  - [puma, -d]
