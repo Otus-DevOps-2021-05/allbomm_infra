@@ -1,7 +1,7 @@
 # allbomm_infra
 allbomm Infra repository
 
-# ДЗ к уроку №3
+# ДЗ №3 к уроку №5
 ## Способ  подключения  к someinternalhost  в  одну команду (через jump host):
 ```sh
 ssh -J appuser@178.154.254.143:22 appuser@10.128.0.35:22
@@ -28,6 +28,6 @@ someinternalhost_IP=10.128.0.35
 ### pritunl_url = https://otusvpn.allbomm.ru/
 
 
-# ДЗ к уроку №4
+# ДЗ №4 к уроку №6
 testapp_IP=84.201.174.126
 testapp_port=9292
