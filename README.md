@@ -55,9 +55,7 @@ testapp_port=9292
             "source_image_family": "{{user `image`}}",
             "ssh_username": "ubuntu",
             "platform_id":  "standard-v2",
-            "use_ipv4_nat": "true",
-            "instance_mem_gb": "8",
-            "instance_cores": "8"
+            "use_ipv4_nat": "true"
         }
     ],
     "provisioners": [
@@ -81,12 +79,25 @@ testapp_port=9292
 #### 5.2. Подготовлен файл описания переменных [variables.json.example](packer/variables.json.example)
 ```json
 {
-	"key": ".\\packer\\key.json",
-	"folder_id": "folder-id-from yc config list",
+	"key": "example.key.json",
+	"folder_id": "1234567890cc40vndnc3",
 	"image": "ubuntu-1604-lts"
 }
 ```
-#### 5.3. Подготовлены скрипты установки компонентов внутри системы
+
+#### 5.3. Подготовлен example-файл ключа (важно для прохождения тестов) [example.key.json](packer/example.key.json)
+```json
+{
+   "id": "01234567890123456789",
+   "service_account_id": "0123456789abcdefghij",
+   "created_at": "2021-06-27T11:21:31.490950066Z",
+   "key_algorithm": "RSA_2048",
+   "public_key": "-----BEGIN PUBLIC KEY-----\nA..................Z\n-----END PUBLIC KEY-----\n",
+   "private_key": "-----BEGIN PRIVATE KEY-----\nA................Z==\n-----END PRIVATE KEY-----\n"
+}
+```
+
+#### 5.4. Подготовлены скрипты установки компонентов внутри системы
 [install_ruby.sh](packer/scripts/install_ruby.sh)
 ```sh
 #!/bin/bash
@@ -167,6 +178,12 @@ packer build -var-file=./variables.json ./ubuntu16.json
 ```
 
 После выполнения команд сервис будет запущен через 2-4 минуты и будет поступен по ссылке:
+
 http://GLOBAL-VM-IP:9292/
+
+
+![Image 5-7-1](images/hw5-l7-1.png)
+
+![Image 5-7-2](images/hw5-l7-2.png)
 
 </details>
