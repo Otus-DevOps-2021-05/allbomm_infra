@@ -1,0 +1,5 @@
+{
+	"key": ".\\packer\\key.json",
+	"folder_id": "folder-id-from yc config list",
+	"image": "ubuntu-1604-lts"
+}
