@@ -1,10 +1,10 @@
-#terraform {
-#  required_providers {
-#    yandex = {
-#      source = "yandex-cloud/yandex"
-#    }
-#  }
-#}
+terraform {
+  required_providers {
+    yandex = {
+      source = "yandex-cloud/yandex"
+    }
+  }
+}
 
 provider "yandex" {
   token     = var.service_account_key_file
@@ -20,6 +20,12 @@ resource "yandex_compute_instance" "app" {
     cores  = 2
     core_fraction = 100
     memory = 2
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = var.image_id
+    }
   }
 
   network_interface {
