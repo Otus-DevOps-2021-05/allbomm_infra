@@ -198,36 +198,36 @@ OS Windows 10 x64
 Переместили файл terraform.exe в C:\Windows\System32 для удобства использования
 
 Проверяем версии:
-...cmd
+```cmd
 yc version
-...
+```
 
-...
+```
 Yandex.Cloud CLI 0.77.0 windows/amd64
-...
+```
 
 При необходимости выполняем:
-...
+```
 yc components update
-...
+```
 
-...cmd
+```cmd
 terraform -v
-...
+```
 
-...
+```
 Terraform v1.0.2
 on windows_amd64
-...
+```
 
 Создаём ветку terraform-1 из main
 Выполняем команду для получения информации:
-...
+```
 yc config list
-...
+```
 Создаём файл .\allbomm_infra\terraform\main.tf с содержимым
 
-...
+```
 terraform {
   required_providers {
     yandex = {
@@ -242,27 +242,27 @@ provider "yandex" {
   folder_id = "<идентификатор каталога>"
   zone      = "ru-central1-a"
 }
-...
+```
 
 Инициализируем terraform командой:
-...cmd
+```cmd
 cd .\allbomm_infra\terraform
 terraform init
-...
+```
 
 Проверяем что после инициализации установился провайдер yandex-cloud
-...cmd
+```cmd
 terraform -v
-...
+```
 
-...
+```
 Terraform v1.0.2
 on windows_amd64
 + provider registry.terraform.io/yandex-cloud/yandex v0.61.0
-...
+```
 
 
-...
+```
 # Узнаём FOLDER_ID
 yc config list
 # Создаём сервисный аккаунт terraform-user
@@ -273,6 +273,6 @@ yc iam service-account get terraform-user
 yc resource-manager folder add-access-binding --id $FOLDER_ID --role editor --service-account-id $ACCOUNT_ID
 # Выгружаем key.json для аккаунта terraform-user
 yc iam key create --service-account-id $ACCOUNT_ID --output C:/Users/MLW/.ssh/key-terraform-user.json
-...
+```
 
 </details>
