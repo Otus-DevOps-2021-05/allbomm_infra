@@ -187,3 +187,264 @@ http://GLOBAL-VM-IP:9292/
 ![Image 5-7-2](images/hw5-l7-2.png)
 
 </details>
+
+## ДЗ №6 к уроку №8 (Знакомство с Terraform)
+<details>
+<summary>Алгоритм выполнения</summary>
+
+OS Windows 10 x64
+
+Скачали terraform: https://releases.hashicorp.com/terraform/1.0.2/terraform_1.0.2_windows_amd64.zip
+Переместили файл terraform.exe в C:\Windows\System32 для удобства использования
+
+Проверяем версии:
+```cmd
+yc version
+```
+
+```
+Yandex.Cloud CLI 0.77.0 windows/amd64
+```
+
+При необходимости выполняем:
+```
+yc components update
+```
+
+```cmd
+terraform -v
+```
+
+```
+Terraform v1.0.2
+on windows_amd64
+```
+
+Создаём ветку terraform-1 из main
+Выполняем команду для получения информации:
+```
+yc config list
+```
+Создаём файл .\allbomm_infra\terraform\main.tf с содержимым
+
+```
+terraform {
+  required_providers {
+    yandex = {
+      source = "yandex-cloud/yandex"
+    }
+  }
+}
+
+provider "yandex" {
+  token     = "<OAuth>"
+  cloud_id  = "<идентификатор облака>"
+  folder_id = "<идентификатор каталога>"
+  zone      = "ru-central1-a"
+}
+```
+
+Инициализируем terraform командой:
+```cmd
+cd .\allbomm_infra\terraform
+terraform init
+```
+
+Проверяем что после инициализации установился провайдер yandex-cloud
+```cmd
+terraform -v
+```
+
+```
+Terraform v1.0.2
+on windows_amd64
++ provider registry.terraform.io/yandex-cloud/yandex v0.61.0
+```
+
+Создаём сервисный аккаунт terraform-user в yandex cloud с ролью editor
+```
+# Узнаём FOLDER_ID
+yc config list
+# Создаём сервисный аккаунт terraform-user
+yc iam service-account create --name terraform-user --folder-id $FOLDER_ID
+# Получаем ID аккаунта terraform-user
+yc iam service-account get terraform-user
+# Добавляем роль editor аккаунту terraform-user
+yc resource-manager folder add-access-binding --id $FOLDER_ID --role editor --service-account-id $ACCOUNT_ID
+# Выгружаем key.json для аккаунта terraform-user
+yc iam key create --service-account-id $ACCOUNT_ID --output C:/Users/MLW/.ssh/key-terraform-user.json
+```
+
+Редактируем файл main.tf (процесс был многоитерационный, но опишу одним пунктом)
+Примечание: секция terraform закомментирована, с ней не проходите тесты, а без неё на Windows не работало.
+```
+#terraform {
+#  required_providers {
+#    yandex = {
+#      source = "yandex-cloud/yandex"
+#    }
+#  }
+#}
+
+provider "yandex" {
+  service_account_key_file = var.service_account_key_file
+  cloud_id  = var.cloud_id
+  folder_id = var.folder_id
+  zone      = var.zone
+}
+
+resource "yandex_compute_instance" "app" {
+  name  = "reddit-app"
+
+  resources {
+    cores  = 2
+    core_fraction = 100
+    memory = 2
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = var.image_id
+    }
+  }
+
+  network_interface {
+    subnet_id = var.subnet_id
+    nat       = true
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file(var.public_key_path)}"
+  }
+
+  connection {
+    type  = "ssh"
+    host  = self.network_interface.0.nat_ip_address
+    user  = "ubuntu"
+    agent = false
+    private_key = file(var.private_key_path)
+  }
+
+  provisioner "file" {
+    source      = "files/puma.service"
+    destination = "/tmp/puma.service"
+  }
+
+  provisioner "remote-exec" {
+    script = "files/deploy.sh"
+  }
+}
+```
+
+Создаём файл вывода информации о виртуальной машине outputs.tf
+```
+output "external_ip_address_app" {
+  value = yandex_compute_instance.app.network_interface.0.nat_ip_address
+}
+```
+
+Создаём файлы puma.service и deploy.sh, дла разворачивания сервисов внутри ВМ
+files/puma.service
+```
+[Unit]
+Description=Puma HTTP Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/reddit
+ExecStart=/bin/bash -lc 'puma'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+files/deploy.sh
+```
+#!/bin/bash
+sleep 15s
+set -e
+APP_DIR=${1:-$HOME}
+sudo apt-get install -y git
+sleep 5s
+git clone -b monolith https://github.com/express42/reddit.git $APP_DIR/reddit
+cd $APP_DIR/reddit
+bundle install
+sudo mv /tmp/puma.service /etc/systemd/system/puma.service
+sudo systemctl start puma
+sudo systemctl enable puma
+```
+
+Создаём файл variables.tf, содержащий описание входных переменных в main.tf
+```
+variable "cloud_id" {
+  description = "Cloud"
+}
+variable "folder_id" {
+  description = "Folder"
+}
+variable "zone" {
+  description = "Zone"
+  # Значение по умолчанию
+  default = "ru-central1-a"
+}
+variable "public_key_path" {
+  # Описание переменной
+  description = "PUBLIC ssh key"
+}
+variable "image_id" {
+  description = "Disk image"
+}
+variable "subnet_id" {
+  description = "Subnet"
+}
+variable "service_account_key_file" {
+  description = "key .json"
+}
+variable "private_key_path" {
+  description = "PRIVATE ssh key"
+}
+```
+
+Создаём файлы terraform.tfvars и terraform.tfvars.example, содержащие значения переменных, объявленных в файле variables.tf
+```
+cloud_id = "0123456789abc"
+folder_id = "0123456789abc"
+zone = "ru-central1-a"
+image_id = "0123456789abc"
+public_key_path = "~/.ssh/ubuntu.pub"
+subnet_id = "0123456789abc0"
+service_account_key_file = "terraformkey.json"
+private_key_path = "~/.ssh/ubuntu"
+```
+
+Выполняем команды:
+```
+terraform plan
+terraform apply
+```
+
+И получаем вывод:
+```
+Apply complete! Resources: 1 added, 0 changed, 1 destroyed.
+Outputs:
+external_ip_address_app = ***.***.***.***
+```
+
+Сервис доступен по адресу http://IP:9292
+
+После проверки работы сервиса выполняем команду:
+```
+terraform destroy
+```
+
+Перед коммитом в .gitignore добавляем:
+```
+.terraform/
+*.tfstate
+*.tfvars
+.terraform.lock.hcl
+```
+
+</details>
