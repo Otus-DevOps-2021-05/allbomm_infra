@@ -578,3 +578,11 @@ ansible all -m ping -i inventory.yml
 ```
 
 </details>
+
+## ДЗ №9 к уроку №11 (Продолжение знакомства с Ansible: templates, handlers, dynamic inventory, vault, tags)
+<details>
+<summary>Алгоритм выполнения</summary>
+
+Создаём ветку ansible-2 из ansible-1
+
+</details>
