@@ -963,7 +963,7 @@ packer/variables.json
 
 Попровили файлы `packer/key.json.example` и `packer/variables.json.example` для тестов
 
-##Для проверки необходимо выполнить:
+## Для проверки необходимо выполнить:
 ```sh
 # ansible
 cd allbomm_infra/ansible
@@ -976,5 +976,8 @@ cd allbomm_infra/packer
 packer build -var-file packer/variables.json packer/app.json
 packer build -var-file packer/variables.json packer/db.json
 ```
+
+и перейти по ссылке созданного сервиса
+http://APP_SERVER_IP:9292/
 
 </details>
