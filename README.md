@@ -543,6 +543,18 @@ retry_files_enabled = False
 ```
 
 Cоздали файл `.\ansible\inventory.yml` по аналогии с inventory, но в формате yml (Альтернативный формат inventory файла)
+```
+app:
+  hosts:
+    appserver:
+      ansible_host: 178.19.131.97
+
+db:
+  hosts:
+    dbserver:
+      ansible_host: 178.19.130.124
+
+```
 
 Создали файл плейбука `.\ansible\clone.yml`
 ```
