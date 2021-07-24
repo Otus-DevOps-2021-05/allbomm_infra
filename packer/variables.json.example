@@ -1,7 +1,5 @@
 {
+	"key": "key.json.example",
 	"folder_id": "1234567890cc40vndnc3",
-	"source_image_type": "ubuntu-1604-lts",
-	"key_path": "key.json.example",
-	"subnet_id": "1234567890cc40vndnc3",
-	"username": "defaultuser"
+	"image": "ubuntu-1604-lts"
 }
