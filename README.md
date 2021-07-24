@@ -585,4 +585,396 @@ ansible all -m ping -i inventory.yml
 
 Создаём ветку ansible-2 из ansible-1
 
+Создали файлы плейбуков `reddit_app.yml (reddit_app_one_play.yml)` и `reddit_app2.yml (reddit_app_multiple_plays.yml)`.
+
+`reddit_app_one_play.yml`
+```
+---
+- name: Configure hosts & deploy application
+  hosts: all
+  vars:
+    mongo_bind_ip: 0.0.0.0
+    db_host: 178.19.131.124
+  tasks:
+    - name: Change mongo config file
+      become: true
+      template:
+        src: templates/mongod.conf.j2
+        dest: /etc/mongod.conf
+        mode: 0644
+      tags: db-tag
+      notify: restart mongod
+
+    - name: Add unit file for Puma
+      become: true
+      copy:
+        src: files/puma.service
+        dest: /etc/systemd/system/puma.service
+      tags: app-tag
+      notify: reload puma
+
+    - name: enable puma
+      become: true
+      systemd: name=puma enabled=yes
+      tags: app-tag
+
+    - name: Add config for DB connection
+      template:
+        src: templates/db_config.j2
+        dest: /home/ubuntu/db_config
+      tags: app-tag
+
+    - name: install git
+      become: yes
+      apt: name=git state=present
+      tags: deploy-tag
+
+    - name: Fetch the latest version of application code
+      git:
+        repo: 'https://github.com/express42/reddit.git'
+        dest: /home/ubuntu/reddit
+        version: monolith
+      tags: deploy-tag
+      notify: reload puma
+
+    - name: Bundle install
+      bundler:
+        state: present
+        chdir: /home/ubuntu/reddit
+      tags: deploy-tag
+
+
+  handlers:
+    - name: restart mongod
+      become: true
+      service:
+        name: mongod
+        state: restarted
+
+    - name: reload puma
+      become: true
+      systemd:
+        name: puma
+        state: restarted
+```
+
+`reddit_app_multiple_plays.yml`
+```
+---
+- name: Configure MongoDB
+  hosts: db
+  tags: db-tag
+  become: true
+  vars:
+    mongo_bind_ip: 0.0.0.0
+  tasks:
+    - name: Change mongo config file
+      template:
+        src: templates/mongod.conf.j2
+        dest: /etc/mongod.conf
+        mode: 0644
+      notify: restart mongod
+
+  handlers:
+  - name: restart mongod
+    service: name=mongod state=restarted
+
+- name: Configure App
+  hosts: app
+  tags: app-tag
+  become: true
+  vars:
+   db_host: 178.19.131.124
+  tasks:
+    - name: Add unit file for Puma
+      copy:
+        src: files/puma.service
+        dest: /etc/systemd/system/puma.service
+      notify: reload puma
+
+    - name: Add config for DB connection
+      template:
+        src: templates/db_config.j2
+        dest: /home/ubuntu/db_config
+        owner: ubuntu
+        group: ubuntu
+
+    - name: enable puma
+      systemd: name=puma enabled=yes
+
+  handlers:
+  - name: reload puma
+    systemd:
+      name: puma
+      state: restarted
+
+- name: Deploy App
+  hosts: app
+  tags: deploy-tag
+  tasks:
+    - name: install git
+      become: yes
+      apt: name=git state=present
+
+    - name: Fetch the latest version of application code
+      git:
+        repo: 'https://github.com/express42/reddit.git'
+        dest: /home/ubuntu/reddit
+        version: monolith
+      notify: restart puma
+
+    - name: Bundle install
+      bundler:
+        state: present
+        chdir: /home/ubuntu/reddit
+
+  handlers:
+    - name: restart puma
+      become: true
+      systemd:
+        name: puma
+        state: restarted
+```
+
+Создали файлы плейбуков `site.yml`, `app.yml`, `db.yml`, `deploy.yml` на основе `reddit_app_*.yml`
+
+`site.yml`
+```
+---
+- import_playbook: db.yml
+- import_playbook: app.yml
+- import_playbook: deploy.yml
+```
+
+`app.yml`
+```
+---
+- name: Configure App
+  hosts: app
+  become: true
+  vars:
+   db_host: "10.10.185.94"
+  tasks:
+    - name: Add unit file for Puma
+      copy:
+        src: files/puma.service
+        dest: /etc/systemd/system/puma.service
+      notify: reload puma
+
+    - name: Add config for DB connection
+      template:
+        src: templates/db_config.j2
+        dest: /home/ubuntu/db_config
+        owner: ubuntu
+        group: ubuntu
+
+    - name: enable puma
+      systemd:
+        name: puma
+        enabled: true
+
+  handlers:
+  - name: reload puma
+    systemd:
+      name: puma
+      state: restarted
+```
+
+`db.yml`
+```
+---
+- name: Configure MongoDB
+  hosts: db
+  become: true
+  vars:
+    mongo_bind_ip: 0.0.0.0
+  tasks:
+    - name: Change mongo config file
+      template:
+        src: templates/mongod.conf.j2
+        dest: /etc/mongod.conf
+        mode: 0644
+      notify: restart mongod
+
+  handlers:
+  - name: restart mongod
+    service:
+      name: mongod
+      state: restarted
+```
+
+`deploy.yml`
+```
+---
+- name: Deploy App
+  hosts: app
+  tasks:
+    - name: install git
+      become: true
+      apt:
+        name: git
+        state: present
+
+    - name: Fetch the latest version of application code
+      git:
+        repo: 'https://github.com/express42/reddit.git'
+        dest: /home/ubuntu/reddit
+        version: monolith
+      notify: restart puma
+
+    - name: Bundle install
+      bundler:
+        state: present
+        chdir: /home/ubuntu/reddit
+
+  handlers:
+    - name: restart puma
+      become: true
+      systemd:
+        name: puma
+        state: restarted
+```
+
+Создали плейбуки для packer `packer_app.yml` и `packer_db.yml`
+
+`packer_app.yml`
+```
+---
+- name: Ruby
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install Ruby
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      loop:
+        - ruby-full
+        - ruby-bundler
+        - build-essential
+```
+
+`packer_db.yml`
+```
+---
+- name: Install MongoDB 4.2
+  hosts: all
+  become: true
+
+  tasks:
+  # Add mongo-db repo
+  - name: Add key
+    apt_key:
+      url: https://www.mongodb.org/static/pgp/server-4.2.asc
+      state: present
+
+  - name: Add repo
+    apt_repository:
+      repo: deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse
+      state: present
+
+
+  - name: Install mongodb
+    apt:
+      name: mongodb-org
+      state: present
+      update_cache: true
+
+  - name: Enable mongod
+    systemd:
+      name: mongod
+      enabled: true
+```
+
+Изменили секции provisioners в файлах пакера `packer/app.json` и `packer/db.json`.
+
+`packer/app.json`
+```
+{
+    "builders": [
+        {
+          "type": "yandex",
+          "service_account_key_file": "{{user `key_path`}}",
+          "folder_id": "{{user `folder_id`}}",
+          "source_image_family": "{{user `source_image_type`}}",
+          "image_name": "reddit-base-{{timestamp}}",
+          "image_family": "reddit-base",
+          "subnet_id": "{{user `subnet_id`}}",
+          "use_ipv4_nat": true,
+          "ssh_username": "{{user `username`}}",
+          "platform_id": "standard-v1",
+          "serial_log_file": "console.log"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "ansible",
+            "playbook_file": "ansible/packer_app.yml"
+        }
+    ]
+}
+```
+
+`packer/db.json`
+```
+{
+    "builders": [
+        {
+          "type": "yandex",
+          "service_account_key_file": "{{user `key_path`}}",
+          "folder_id": "{{user `folder_id`}}",
+          "source_image_family": "{{user `source_image_type`}}",
+          "image_name": "reddit-base-{{timestamp}}",
+          "image_family": "reddit-base",
+          "subnet_id": "{{user `subnet_id`}}",
+          "use_ipv4_nat": true,
+          "ssh_username": "{{user `username`}}",
+          "platform_id": "standard-v1",
+          "serial_log_file": "console.log"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "ansible",
+            "playbook_file": "ansible/packer_db.yml"
+        }
+    ]
+}
+```
+
+Обновили `.gitignore`, исключив файлы `*.retry`
+```
+# packer
+packer/variables.json
+
+# terraform
+.terraform/
+*.tfstate
+*.tfvars
+.terraform.lock.hcl
+*.tfstate.*.backup
+*.tfstate.backup
+
+# ansible
+*.retry
+```
+
+Попровили файлы `packer/key.json.example` и `packer/variables.json.example` для тестов
+
+##Для проверки необходимо выполнить:
+```sh
+# ansible
+cd allbomm_infra/ansible
+ansible-playbook reddit_app_multiple_plays.yml
+```
+и
+```sh
+# packer
+cd allbomm_infra/packer
+packer build -var-file packer/variables.json packer/app.json
+packer build -var-file packer/variables.json packer/db.json
+```
+
 </details>
