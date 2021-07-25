@@ -1,8 +1,13 @@
-
+# packer
 packer/variables.json
+
+# terraform
 .terraform/
 *.tfstate
 *.tfvars
 .terraform.lock.hcl
 *.tfstate.*.backup
 *.tfstate.backup
+
+# ansible
+*.retry
