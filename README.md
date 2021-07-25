@@ -1,7 +1,11 @@
 # allbomm_infra
 allbomm Infra repository
 
-## ДЗ №3 к уроку №5
+## ДЗ №3 к уроку №5 (Знакомство с облачной инфраструктурой и облачными сервисами)
+
+<details>
+<summary>Информация для проверки</summary>
+
 ### Способ  подключения  к someinternalhost  в  одну команду (через jump host):
 ```sh
 ssh -J appuser@178.154.254.143:22 appuser@10.128.0.35:22
@@ -27,12 +31,20 @@ someinternalhost_IP=10.128.0.35
 #### _SSL подключен_
 #### pritunl_url = https://otusvpn.allbomm.ru/
 
+</details>
 
-## ДЗ №4 к уроку №6
+## ДЗ №4 к уроку №6 (Основные сервисы Yandex Cloud)
+
+<details>
+<summary>Информация для проверки</summary>
+
 testapp_IP=84.201.174.126
 testapp_port=9292
 
-## ДЗ №5 к уроку №7 (Подготовка образов с помощью Packer)
+</details>
+
+## ДЗ №5 к уроку №7 (Модели управления инфраструктурой. Подготовка образов с помощью Packer)
+
 <details>
 <summary>Алгоритм выполнения</summary>
 
@@ -446,5 +458,47 @@ terraform destroy
 *.tfvars
 .terraform.lock.hcl
 ```
+
+</details>
+
+## ДЗ №7 к уроку №9 (Принципы организации инфраструктурного кода и работа над инфраструктурой в команде на примере Terraform)
+<details>
+<summary>Алгоритм выполнения</summary>
+
+Создаём ветку terraform-2 из main
+
+Добавили в `main.tf` информацию об IP:
+
+```
+resource "yandex_vpc_network" "app-network" {
+  name = "reddit-app-network"
+}
+
+resource "yandex_vpc_subnet" "app-subnet" {
+  name           = "reddit-app-subnet"
+  zone           = "ru-central1-a"
+  network_id     = "${yandex_vpc_network.app-network.id}"
+  v4_cidr_blocks = ["192.168.10.0/24"]
+}
+
+```
+
+Подготовили файлы для инстансов `app` и `db` в папке `terraform\modules\*`
+
+Подготовили `storage-bucket.tf` файл
+
+Подготовили 2 директории `terraform/stage` и `terraform/prod` для условного разделения окружения.
+
+После проверки работы выполняем команду:
+
+``` cmd
+cd terraform/prod
+# или cd terraform/stage
+terraform init
+terraform plan
+terraform apply
+```
+
+Предварительно должен быть создан файл terraform.tfvars, по аналогии с terraform.tfvars.example
 
 </details>
