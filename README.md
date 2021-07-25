@@ -502,3 +502,79 @@ terraform apply
 Предварительно должен быть создан файл terraform.tfvars, по аналогии с terraform.tfvars.example
 
 </details>
+
+## ДЗ №8 к уроку №10 (Управление конфигурацией. Знакомство с Ansible)
+<details>
+<summary>Алгоритм выполнения</summary>
+
+Создаём ветку ansible-1 из terraform-2
+
+Добавили папку `.\ansible`
+
+Добавили файл:
+
+`.\ansible\requirements.txt`
+
+```
+ansible>=2.4
+```
+
+Произвели установку ansible по инструкции -- https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
+
+Создали Inventory файл `.\ansible\inventory` на основе информации об инстансах, предварительно запущенных через terraform
+
+```
+[app]
+appserver ansible_host=178.19.131.97
+
+[db]
+dbserver ansible_host=178.19.131.124
+```
+
+Создали файл `.\ansible\ansible.cfg`
+
+```
+[defaults]
+inventory = ./inventory
+remote_user = ubuntu
+private_key_file = ~/.ssh/appuser
+host_key_checking = False
+retry_files_enabled = False
+```
+
+Cоздали файл `.\ansible\inventory.yml` по аналогии с inventory, но в формате yml (Альтернативный формат inventory файла)
+```
+app:
+  hosts:
+    appserver:
+      ansible_host: 178.19.131.97
+
+db:
+  hosts:
+    dbserver:
+      ansible_host: 178.19.130.124
+
+```
+
+Создали файл плейбука `.\ansible\clone.yml`
+```
+---
+- name: Clone
+  hosts: app
+  become: true
+  tasks:
+    - name: Clone repo
+      git:
+        repo: https://github.com/express42/reddit.git
+        dest: /home/appuser/reddit
+```
+Проверка и запуск выполнялись практически после каждого изменения.
+
+Для проверки необходимо выполнить:
+```
+cd ./allbomm_infra/ansible
+ansible-playbook clone.yml -i inventory.yml
+ansible all -m ping -i inventory.yml
+```
+
+</details>
